@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+  <title>Admin • TypeRush</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bg">
+  <div class="topbar">
+    <div><b>{{username}}</b></div>
+    <div class="row">
+      <a class="btn small ghost" href="/">Home</a>
+      <a class="btn small" href="/logout">Logout</a>
+    </div>
+  </div>
+
+  <div class="card wide">
+    <h2>Users</h2>
+    <table class="tbl">
+      <tr><th>ID</th><th>Username</th><th>Admin</th><th>Action</th></tr>
+      {% for u in users %}
+      <tr>
+        <td>{{u.id}}</td>
+        <td>{{u.username}}</td>
+        <td>{{u.is_admin}}</td>
+        <td>
+          {% if u.username != username %}
+          <form method="POST" action="/admin/delete_user/{{u.id}}">
+            <button class="btn small danger" type="submit">Delete</button>
+          </form>
+          {% else %}
+          <small>(you)</small>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="card wide">
+    <h2>Latest Results</h2>
+    <table class="tbl">
+      <tr><th>ID</th><th>User</th><th>WPM</th><th>Acc</th><th>Time</th><th>Words</th><th>Action</th></tr>
+      {% for r in results %}
+      <tr>
+        <td>{{r.id}}</td>
+        <td>{{r.username}}</td>
+        <td>{{r.wpm}}</td>
+        <td>{{r.accuracy}}%</td>
+        <td>{{r.seconds}}s</td>
+        <td>{{r.word_count}}</td>
+        <td>
+          <form method="POST" action="/admin/delete_result/{{r.id}}">
+            <button class="btn small danger" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</body>
+</html>

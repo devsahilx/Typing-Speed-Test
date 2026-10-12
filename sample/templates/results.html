@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+  <title>My Results</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bg">
+  <div class="topbar">
+    <div>Results • <b>{{username}}</b></div>
+    <div class="row">
+      <a class="btn small ghost" href="/">Home</a>
+      <a class="btn small" href="/logout">Logout</a>
+    </div>
+  </div>
+
+  <div class="card wide">
+    <h2>Your Saved Results</h2>
+    <table class="tbl">
+      <tr>
+        <th>ID</th><th>WPM</th><th>Accuracy</th><th>Time</th><th>Words</th><th>Date</th>
+      </tr>
+      {% for r in results %}
+      <tr>
+        <td>{{r.id}}</td>
+        <td>{{r.wpm}}</td>
+        <td>{{r.accuracy}}%</td>
+        <td>{{r.seconds}}s</td>
+        <td>{{r.word_count}}</td>
+        <td>{{r.created_at}}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</body>
+</html>

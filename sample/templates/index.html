@@ -1,0 +1,222 @@
+<!doctype html>
+<html>
+<head>
+  <title>Typing Test</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bg">
+  <div class="topbar">
+    <div>Welcome, <b>{{username}}</b></div>
+    <div class="row">
+      <a class="btn small ghost" href="/results">My Results</a>
+      <a class="btn small ghost" href="/admin">Admin</a>
+      <a class="btn small" href="/logout">Logout</a>
+    </div>
+  </div>
+
+  <div class="card wide">
+    <h2>Typing Speed Test</h2>
+
+    <div class="row">
+      <label><b>Select Time:</b></label>
+      <select id="timeSelect" class="btn ghost">
+        <option value="60">60 Seconds</option>
+        <option value="120">120 Seconds</option>
+        <option value="180">180 Seconds</option>
+      </select>
+
+      <label style="margin-left:12px;"><b>Difficulty:</b></label>
+      <select id="diff" class="btn ghost">
+        <option value="">Any</option>
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+
+      <button class="btn ghost" id="loadBtn">Load New Passage</button>
+    </div>
+
+    <!-- ✅ ONE sample text area -->
+    <p class="sample" id="sampleText">Loading passage...</p>
+
+    <!-- ✅ ONE typing box -->
+    <textarea id="typebox" class="box" placeholder="Start typing here..."></textarea>
+
+    <div class="stats">
+      <div><b>WPM:</b> <span id="wpm">0</span></div>
+      <div><b>Accuracy:</b> <span id="acc">0</span>%</div>
+      <div><b>Time:</b> <span id="time">60</span>s</div>
+    </div>
+
+    <div class="row">
+      <button class="btn" id="endBtn">End & Save</button>
+      <button class="btn ghost" id="resetBtn">Reset</button>
+    </div>
+
+    <p class="ok" id="msg"></p>
+  </div>
+
+<script>
+let startTime = null;
+let timer = null;
+let totalTime = 60;
+
+const sampleEl = document.getElementById("sampleText");
+const box = document.getElementById("typebox");
+const timeEl = document.getElementById("time");
+const wpmEl = document.getElementById("wpm");
+const accEl = document.getElementById("acc");
+const msgEl = document.getElementById("msg");
+
+const timeSelect = document.getElementById("timeSelect");
+const diffSelect = document.getElementById("diff");
+
+document.getElementById("loadBtn").addEventListener("click", loadPassage);
+document.getElementById("endBtn").addEventListener("click", () => endTest(false));
+document.getElementById("resetBtn").addEventListener("click", resetTest);
+
+timeSelect.addEventListener("change", () => {
+  totalTime = parseInt(timeSelect.value, 10);
+  resetTest();
+});
+
+diffSelect.addEventListener("change", () => {
+  loadPassage();
+});
+
+// ✅ Load passage from Flask API
+async function loadPassage(){
+  const diff = diffSelect.value;
+  const url = diff ? `/api/get_passage?difficulty=${diff}` : `/api/get_passage`;
+
+  const res = await fetch(url);
+  const p = await res.json();
+
+  sampleEl.innerText = p.text || "No passage found.";
+  resetTest();
+  msgEl.innerText = "New passage loaded. Start typing!";
+}
+
+// ✅ Start timer on first input
+box.addEventListener("input", () => {
+  if (!startTime) {
+    startTime = Date.now();
+    timer = setInterval(updateTime, 250);
+  }
+  liveCalc();
+});
+
+// ✅ Timer update
+function updateTime(){
+  if (!startTime) return;
+
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const remaining = totalTime - elapsed;
+
+  timeEl.innerText = remaining > 0 ? remaining : 0;
+
+  if (remaining <= 0) {
+    clearInterval(timer);
+    timer = null;
+    endTest(true);
+  }
+}
+
+// ✅ Correct/Wrong char calculation
+function calcCorrectWrong(sample, typed){
+  const len = Math.max(sample.length, typed.length);
+  let correct = 0, wrong = 0;
+
+  for (let i = 0; i < len; i++){
+    const s = sample[i] || "";
+    const t = typed[i] || "";
+    if (t === "") continue;
+    if (t === s) correct++;
+    else wrong++;
+  }
+  return { correct, wrong };
+}
+
+function countWords(text){
+  const t = text.trim();
+  if(!t) return 0;
+  return t.split(/\s+/).length;
+}
+
+// ✅ Live WPM + Accuracy
+function liveCalc(){
+  const sample = sampleEl.innerText;
+  const typed = box.value;
+
+  const elapsedRaw = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+  const elapsed = Math.min(totalTime, Math.max(1, elapsedRaw));
+
+  const { correct, wrong } = calcCorrectWrong(sample, typed);
+
+  const word_count = countWords(typed);
+  const wpm = Math.round((word_count / elapsed) * 60);
+
+  const totalTyped = correct + wrong;
+  const accuracy = totalTyped === 0 ? 0 : Number(((correct / totalTyped) * 100).toFixed(2));
+
+  wpmEl.innerText = wpm;
+  accEl.innerText = accuracy;
+
+  return { wpm, accuracy, correct, wrong, seconds: elapsed, word_count, typed_text: typed };
+}
+
+// ✅ End + Save to MySQL
+async function endTest(auto=false){
+  if (!startTime) {
+    msgEl.innerText = "Start typing first!";
+    return;
+  }
+
+  if (timer) clearInterval(timer);
+  timer = null;
+
+  const r = liveCalc();
+
+  const res = await fetch("/api/save_result", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      wpm: r.wpm,
+      accuracy: r.accuracy,
+      correct_chars: r.correct,
+      wrong_chars: r.wrong,
+      seconds: r.seconds,
+      word_count: r.word_count,
+      typed_text: r.typed_text
+    })
+  });
+
+  const data = await res.json();
+  msgEl.innerText = data.message || (auto ? "Time Up! Result Saved!" : "Result Saved!");
+
+  // stop further typing until reset/load
+  startTime = null;
+}
+
+// ✅ Reset
+function resetTest(){
+  if (timer) clearInterval(timer);
+  timer = null;
+  startTime = null;
+
+  box.value = "";
+  wpmEl.innerText = 0;
+  accEl.innerText = 0;
+  timeEl.innerText = totalTime;
+}
+
+// initial load
+window.onload = () => {
+  totalTime = parseInt(timeSelect.value, 10);
+  timeEl.innerText = totalTime;
+  loadPassage();
+};
+</script>
+
+</body>
+</html>

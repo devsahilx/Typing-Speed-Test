@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login • TypeRush</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body class="auth-body">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="brand">
+        <div>
+          <div class="brand-name">TypeRush</div>
+          <div class="brand-sub">Login to start your typing test</div>
+        </div>
+      </div>
+
+      {% if error %}
+        <div class="alert">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('login') }}" class="auth-form">
+        <label class="lbl">Username</label>
+        <div class="inp-wrap">
+          <span class="ico">👤</span>
+          <input class="inp2" name="username" placeholder="Enter username" required />
+        </div>
+
+        <label class="lbl">Password</label>
+        <div class="inp-wrap">
+          <span class="ico">🔒</span>
+          <input class="inp2" type="password" name="password" placeholder="Enter password" required />
+        </div>
+
+        <button type="submit" class="btn2">Login</button>
+      </form>
+
+      <div class="auth-foot">
+        <span>New here?</span>
+        <a href="{{ url_for('register') }}" class="link">Create account</a>
+      </div>
+
+      <div class="auth-foot">
+        <span></span>
+        <a href="/admin" class="link"></a>
+      </div>
+    </div>
+
+    <div class="side-card">
+      <h2>Beat your best score.</h2>
+      <p>Track WPM, accuracy, and save your results after every test.</p>
+      <div class="tip">Tip: focus on accuracy first, speed will follow.</div>
+    </div>
+  </div>
+</body>
+</html>
